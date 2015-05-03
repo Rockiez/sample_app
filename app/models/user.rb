@@ -1,4 +1,5 @@
 class User < ActiveRecord::Base
+	has_many :microposts, dependent: :destroy
 	attr_accessor :remember_token, :activation_token, :reset_token
   before_save :downcase_email
   before_create :create_activation_digest
@@ -20,6 +21,10 @@ class User < ActiveRecord::Base
     SecureRandom.urlsafe_base64
   end
 
+	def feed
+		Micropost.where("user_id = ?", id)
+	end
+
   def activate
 		update_attribute(:activated, true)
 		update_attribute(:activated_at, Time.zone.now)
@@ -37,13 +42,12 @@ class User < ActiveRecord::Base
 	def send_password_reset_email
 		UserMailer.password_reset(self).deliver_now
 	end
-  # 为了持久会话，在数据库中记住用户
+
   def remember
     self.remember_token = User.new_token
     update_attribute(:remember_digest, User.digest(remember_token))
   end
 
-  # 如果指定的令牌和摘要匹配，返回 true
   def authenticated?(remember_token)
     BCrypt::Password.new(remember_digest).is_password?(remember_token)
   end
@@ -65,4 +69,4 @@ class User < ActiveRecord::Base
 	  return false if digest.nil?
 	  BCrypt::Password.new(digest).is_password?(token)
   end
-		  end
+end
